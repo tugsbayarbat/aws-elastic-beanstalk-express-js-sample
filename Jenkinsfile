@@ -9,7 +9,7 @@ pipeline {
     IMAGE_TAG = "${BUILD_NUMBER}"
 
     NODE_IMAGE        = 'node:16'
-    SNYK_TOKEN_ID     = '6d600b7e-4230-417b-83b7-1cecd118bbd2'
+    SNYK_TOKEN_ID     = 'snyk-token'
   }
 
   stages {
