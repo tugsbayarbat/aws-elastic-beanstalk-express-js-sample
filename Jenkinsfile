@@ -1,13 +1,6 @@
 pipeline {
   agent any
 
-  options {
-    timestamps()
-    ansiColor('xterm')
-    buildDiscarder(logRotator(numToKeepStr: '15'))
-    disableConcurrentBuilds()
-  }
-
   environment {
     REGISTRY          = 'docker.io'
     REGISTRY_NAMESPACE= 'tugsbayar' 
@@ -37,7 +30,6 @@ pipeline {
             sh '''
               node -v
               npm -v
-              # The brief says npm install --save; we keep it to match rubric.
               npm install --save
             '''
           }
@@ -60,8 +52,6 @@ pipeline {
     stage('Build Docker image') {
       steps {
         sh '''
-          # Docker client must be available inside Jenkins container (compose gives it).
-          docker version
           docker build -t "${IMAGE_TAG}" -t "${IMAGE_TAG_LATEST}" .
         '''
       }
