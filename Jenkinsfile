@@ -2,9 +2,9 @@ pipeline {
   agent any
 
   environment {
-    REGISTRY_URL      = 'https://hub.docker.io'
-    IMAGE_NAME        = 'tugsbayar/secdevops-assignment2'
-    REGISTRY_CRED_ID  = 'dockerhub-creds'        
+    DOCKER_REGISTRY      = 'https://hub.docker.io'
+    DOCKER_CREDENTIALS_ID  = 'dockerhub-creds'
+    IMAGE_NAME        = 'tugsbayar/secdevops-assignment2'  
 
     NODE_IMAGE        = 'node:16'
     SNYK_TOKEN_ID     = '6d600b7e-4230-417b-83b7-1cecd118bbd2'
@@ -44,11 +44,11 @@ pipeline {
       }
     }
 
-    stage('Build Docker image') {
+    stage('Build Docker Image') {
       steps {
-        sh """
-          docker build -t "${IMAGE_NAME}:${env.GIT_COMMIT.take(7)}" .
-        """
+        script {
+          env.DOCKER_IMAGE = docker.build("${DOCKER_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}")
+        }
       }
     }
 
@@ -69,15 +69,13 @@ pipeline {
       }
     }
 
-    stage('Push to Docker Hub') {
+    stage('Push Docker Image') {
       steps {
         script {
-          docker.withRegistry("${REGISTRY_URL}", "${REGISTRY_CRED_ID}") {
-            // Push both tags
-            sh """
-              docker push ${IMAGE_NAME}:${env.GIT_COMMIT.take(7)}
-              docker push ${IMAGE_NAME}:latest
-            """
+          // Push to registry with authentication
+          docker.withRegistry("https://${DOCKER_REGISTRY}", "${DOCKER_CREDENTIALS_ID}") {
+              env.DOCKER_IMAGE.push()
+              env.DOCKER_IMAGE.push("latest")  // Also push as latest
           }
         }
       }
