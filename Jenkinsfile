@@ -32,12 +32,7 @@ pipeline {
       steps {
         echo '====[ UNIT TEST ]===='
         sh """
-          set -e
-          if npm run | grep -qE "^\\s*test\\b"; then
-            npm test
-          else
-            echo "No test script found. Skipping."
-          fi
+          npm test
         """
       }
     }
