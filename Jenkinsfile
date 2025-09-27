@@ -49,7 +49,7 @@ pipeline {
     stage('Build Docker Image') {
       steps {
         script {
-          env.DOCKER_IMAGE = docker.build("${DOCKER_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}")
+          dockerImage  = docker.build("${DOCKER_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}")
         }
       }
     }
@@ -76,8 +76,8 @@ pipeline {
         script {
           // Push to registry with authentication
           docker.withRegistry("https://${DOCKER_REGISTRY}", "${DOCKER_CREDENTIALS_ID}") {
-              env.DOCKER_IMAGE.push()
-              env.DOCKER_IMAGE.push("latest")  // Also push as latest
+              dockerImage.push()
+              dockerImage.push("latest")  // Also push as latest
           }
         }
       }
