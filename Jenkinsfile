@@ -49,7 +49,7 @@ pipeline {
     stage('Build Docker Image') {
       steps {
         script {
-          dockerImage  = docker.build("${DOCKER_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}")
+          docker.build("${DOCKER_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}")
         }
       }
     }
@@ -78,8 +78,8 @@ pipeline {
                       passwordVariable: 'DOCKER_PASS')]) {
         sh '''
           echo $DOCKER_PASS | docker login --username $DOCKER_USER --password-stdin
-          dockerImage.push()
-          dockerImage.push("latest")
+          docker push ${IMAGE_NAME}:${IMAGE_TAG}
+          docker push ${IMAGE_NAME}:latest
           '''
         }
       }
