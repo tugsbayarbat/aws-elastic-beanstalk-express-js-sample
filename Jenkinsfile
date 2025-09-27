@@ -17,14 +17,14 @@ pipeline {
       }
     }
 
-    stage('Build') {
+    stage('Install deps (Node 16)') {
       steps {
         echo '====[ BUILD (npm ci / build) ]===='
-        sh """
+        sh '''
           node -v
           npm -v
           npm install --save
-        """
+        '''
       }
     }
 
