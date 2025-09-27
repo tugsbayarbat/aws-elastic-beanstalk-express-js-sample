@@ -2,7 +2,7 @@ pipeline {
   agent any
 
   environment {
-    DOCKER_REGISTRY      = 'https://hub.docker.io'
+    DOCKER_REGISTRY      = 'docker.io'
     DOCKER_CREDENTIALS_ID  = 'dockerhub-creds'
     IMAGE_NAME        = 'tugsbayar/secdevops-assignment2'  
 
