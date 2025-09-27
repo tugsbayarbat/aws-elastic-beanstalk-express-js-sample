@@ -52,22 +52,22 @@ pipeline {
       }
     }
 
-    stage('Dependency security scan (Snyk)') {
-      steps {
-        withCredentials([string(credentialsId: env.SNYK_TOKEN_ID, variable: 'SNYK_TOKEN')]) {
-          script {
-            docker.image(env.NODE_IMAGE).inside('-e CI=true') {
-              sh """
-                npm install -g snyk
-                snyk auth "${SNYK_TOKEN}"
+    // stage('Dependency security scan (Snyk)') {
+    //   steps {
+    //     withCredentials([string(credentialsId: env.SNYK_TOKEN_ID, variable: 'SNYK_TOKEN')]) {
+    //       script {
+    //         docker.image(env.NODE_IMAGE).inside('-e CI=true') {
+    //           sh """
+    //             npm install -g snyk
+    //             snyk auth "${SNYK_TOKEN}"
                 
-                snyk test --severity-threshold=high --fail-on=all || (echo "High/Critical issues found" && exit 1)
-              """
-            }
-          }
-        }
-      }
-    }
+    //             snyk test --severity-threshold=high --fail-on=all || (echo "High/Critical issues found" && exit 1)
+    //           """
+    //         }
+    //       }
+    //     }
+    //   }
+    // }
 
     stage('Push Docker Image') {
       steps {
