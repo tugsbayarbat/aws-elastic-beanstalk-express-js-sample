@@ -6,6 +6,8 @@ pipeline {
     DOCKER_CREDENTIALS_ID  = 'dockerhub-creds'
     IMAGE_NAME        = 'tugsbayar/secdevops-assignment2'  
 
+    IMAGE_TAG = "${BUILD_NUMBER}"
+
     NODE_IMAGE        = 'node:16'
     SNYK_TOKEN_ID     = '6d600b7e-4230-417b-83b7-1cecd118bbd2'
   }
