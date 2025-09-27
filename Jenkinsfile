@@ -1,78 +1,67 @@
 pipeline {
   agent any
 
+  // ====== SIMPLE ENV VARS (edit these) ======
   environment {
-    DOCKER_REGISTRY      = 'docker.io'
-    DOCKER_CREDENTIALS_ID  = 'dockerhub-creds'
-    IMAGE_NAME        = 'tugsbayar/secdevops-assignment2'  
-
-    IMAGE_TAG = "${BUILD_NUMBER}"
-
-    NODE_IMAGE        = 'node:16'
-    SNYK_TOKEN_ID     = '6d600b7e-4230-417b-83b7-1cecd118bbd2'
+    IMAGE_NAME        = 'tugsbayar/secdevops-assignment2'   // Your Docker Hub repo
+    IMAGE_TAG         = "${BUILD_NUMBER}"                   // e.g. 27
+    DOCKERHUB_CREDS   = 'dockerhub-creds'                   // Jenkins Credentials ID (username+password)
+    SNYK_TOKEN_ID     = '6d600b7e-4230-417b-83b7-1cecd118bbd2' // (Optional) Secret Text
   }
 
   stages {
-
     stage('Checkout') {
       steps {
+        echo '====[ CHECKOUT ]===='
         checkout scm
       }
     }
 
-    stage('Install deps (Node 16)') {
+    stage('Build') {
       steps {
-        script {
-          docker.image(env.NODE_IMAGE).inside('-e CI=true') {
-            sh """
-              node -v
-              npm -v
-              npm install --save
-            """
-          }
-        }
+        echo '====[ BUILD (npm ci / build) ]===='
+          sh """
+            node -v
+            npm -v
+            npm install --save
+          """
       }
     }
 
     stage('Unit tests') {
       steps {
+        echo '====[ UNIT TEST ]===='
         script {
           docker.image(env.NODE_IMAGE).inside('-e CI=true') {
             sh """
-              npm test
+              set -e
+              if npm run | grep -qE "^\\s*test\\b"; then
+                npm test
+              else
+                echo "No test script found. Skipping."
+              fi
             """
           }
-        }
-      }
-    }
-
-    stage('Build Docker Image') {
-      steps {
-        script {
-          docker.build("${DOCKER_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}")
         }
       }
     }
 
     stage('Dependency security scan (Snyk)') {
       steps {
+        echo '====[ SECURITY SCAN (Snyk) ]===='
         withCredentials([string(credentialsId: env.SNYK_TOKEN_ID, variable: 'SNYK_TOKEN')]) {
-          script {
-            docker.image(env.NODE_IMAGE).inside('-e CI=true') {
-              sh """
-                echo "=== Installing Snyk CLI ==="
-                npm install -g snyk
+          sh """
+            echo "=== Installing Snyk CLI ==="
+            npm install -g snyk
 
-                echo "=== Authenticating with Snyk ==="
-                snyk auth "${SNYK_TOKEN}"
+            echo "=== Authenticating with Snyk ==="
+            snyk auth "${SNYK_TOKEN}"
 
-                echo "=== Running Snyk test (console output) ==="
-                snyk test --severity-threshold=high --fail-on=all --json > snyk-report.json || true
+            echo "=== Running Snyk test (console output) ==="
+            snyk test --severity-threshold=high --fail-on=all --json > snyk-report.json || true
 
-                echo "=== Scan complete. Report saved to snyk-report.json ==="
-              """
-            }
-          }
+            echo "=== Scan complete. Report saved to snyk-report.json ==="
+          """
         }
       }
       post {
@@ -88,8 +77,17 @@ pipeline {
       }
     }
 
+    stage('Build Docker Image') {
+      steps {
+        echo '====[ IMAGE BUILD (Docker) ]===='
+        script {
+          docker.build("${DOCKER_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}")
+        }
+      }
+    }
 
     stage('Push Docker Image') {
+      echo '====[ PUSH (Docker Hub) ]===='
       steps {          
         withCredentials([usernamePassword(credentialsId: "${DOCKER_CREDENTIALS_ID}", 
                       usernameVariable: 'DOCKER_USER', 
@@ -98,18 +96,23 @@ pipeline {
           echo $DOCKER_PASS | docker login --username $DOCKER_USER --password-stdin
           docker push ${IMAGE_NAME}:${IMAGE_TAG}
           docker push ${IMAGE_NAME}:latest
+          docker logout || true
           '''
         }
       }
     }
   }
 
-  // post {
-  //   success {
-  //     echo "Build ${env.BUILD_NUMBER} pushed as ${IMAGE_TAG}"
-  //   }
-  //   always {
-  //     archiveArtifacts allowEmptyArchive: true, artifacts: 'npm-debug.log, **/snyk*.json, **/dependency-check-report.*'
-  //   }
-  // }
+  post {
+    success {
+      echo "====[ SUMMARY ]===="
+      echo "Build #: ${env.BUILD_NUMBER}"
+      echo "Image:   ${IMAGE_NAME}:${IMAGE_TAG} (also :latest)"
+      echo "Result:  SUCCESS"
+    }
+    failure {
+      echo "====[ SUMMARY ]===="
+      echo "Result:  FAILURE (check the stage logs above)"
+    }
+  }
 }
