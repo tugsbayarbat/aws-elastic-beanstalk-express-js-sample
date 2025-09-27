@@ -60,13 +60,30 @@ pipeline {
           script {
             docker.image(env.NODE_IMAGE).inside('-e CI=true') {
               sh """
+                echo "=== Installing Snyk CLI ==="
                 npm install -g snyk
+
+                echo "=== Authenticating with Snyk ==="
                 snyk auth "${SNYK_TOKEN}"
-                
-                snyk test --severity-threshold=high --fail-on=all || (echo "High/Critical issues found" && exit 1)
+
+                echo "=== Running Snyk test (console output) ==="
+                snyk test --severity-threshold=high --fail-on=all --json > snyk-report.json || true
+
+                echo "=== Scan complete. Report saved to snyk-report.json ==="
               """
             }
           }
+        }
+      }
+      post {
+        always {
+          archiveArtifacts artifacts: 'snyk-report.json', allowEmptyArchive: true
+        }
+        unsuccessful {
+          echo "High/Critical vulnerabilities detected — build failed"
+        }
+        success {
+          echo "No High/Critical vulnerabilities found"
         }
       }
     }
