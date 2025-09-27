@@ -72,12 +72,15 @@ pipeline {
     // }
 
     stage('Push Docker Image') {
-      steps {
-        script {
-          // Push to registry with authentication
-          docker.withRegistry("https://${DOCKER_REGISTRY}", "${DOCKER_CREDENTIALS_ID}") {
-              dockerImage.push()
-              dockerImage.push("latest")  // Also push as latest
+      steps {          
+          withCredentials([usernamePassword(credentialsId: "${DOCKER_CREDENTIALS_ID}", 
+                        usernameVariable: 'DOCKER_USER', 
+                        passwordVariable: 'DOCKER_PASS')]) {
+            sh '''
+              echo $DOCKER_PASS | docker login --username $DOCKER_USER --password-stdin
+              docker push "${IMAGE_TAG}"
+              docker push "${IMAGE_TAG_LATEST}"
+            '''
           }
         }
       }
