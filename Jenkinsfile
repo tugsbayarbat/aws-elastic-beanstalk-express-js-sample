@@ -20,11 +20,11 @@ pipeline {
     stage('Build') {
       steps {
         echo '====[ BUILD (npm ci / build) ]===='
-          sh """
-            node -v
-            npm -v
-            npm install --save
-          """
+        sh """
+          node -v
+          npm -v
+          npm install --save
+        """
       }
     }
 
@@ -34,7 +34,7 @@ pipeline {
         sh """
           set -e
           if npm run | grep -qE "^\\s*test\\b"; then
-            npm test --if-present
+            npm test
           else
             echo "No test script found. Skipping."
           fi
