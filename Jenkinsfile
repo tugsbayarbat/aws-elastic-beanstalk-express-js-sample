@@ -54,87 +54,23 @@ pipeline {
       }
     }
 
-    // stage('Dependency security scan (Snyk)') {
-    //   steps {
-    //     withCredentials([string(credentialsId: env.SNYK_TOKEN_ID, variable: 'SNYK_TOKEN')]) {
-    //       script {
-    //         docker.image(env.NODE_IMAGE).inside('-e CI=true') {
-    //           sh """
-    //             npm install -g snyk
-    //             snyk auth "${SNYK_TOKEN}"
-                
-    //             snyk test --severity-threshold=high --fail-on=all || (echo "High/Critical issues found" && exit 1)
-    //           """
-    //         }
-    //       }
-    //     }
-    //   }
-    // }
-
-    stage('Snyk Security Scan') {
+    stage('Dependency security scan (Snyk)') {
       steps {
-        script {
-          // Snyk container scan for vulnerabilities
-          withCredentials([string(credentialsId: 'snyk-token', variable: 'SNYK_TOKEN')]) {
-            sh '''
-              # Install Snyk CLI if not available
-              if ! command -v snyk &> /dev/null; then
-                  npm install -g snyk
-              fi
-              
-              # Authenticate with Snyk
-              snyk auth $SNYK_TOKEN
-              
-              # Test for vulnerabilities in the Docker image
-              snyk container test ${DOCKER_HUB_NAMESPACE}/${IMAGE_NAME}:${IMAGE_TAG} \
-                  --severity-threshold=high \
-                  --file=Dockerfile \
-                  --json > snyk-results.json || true
-              
-              # Monitor the image in Snyk dashboard
-              snyk container monitor ${DOCKER_HUB_NAMESPACE}/${IMAGE_NAME}:${IMAGE_TAG} \
-                  --file=Dockerfile \
-                  --project-name="${IMAGE_NAME}" || true
-            '''
-          }
-          
-          // Parse results and fail if high/critical vulnerabilities found
+        withCredentials([string(credentialsId: env.SNYK_TOKEN_ID, variable: 'SNYK_TOKEN')]) {
           script {
-            def snykResults = readJSON file: 'snyk-results.json'
-            def vulnerabilities = snykResults.vulnerabilities ?: []
-            def highCriticalVulns = vulnerabilities.findAll { 
-                it.severity == 'high' || it.severity == 'critical' 
-            }
-            
-            if (highCriticalVulns.size() > 0) {
-                echo "❌ Found ${highCriticalVulns.size()} high/critical vulnerabilities!"
-                currentBuild.result = 'UNSTABLE'
+            docker.image(env.NODE_IMAGE).inside('-e CI=true') {
+              sh """
+                npm install -g snyk
+                snyk auth "${SNYK_TOKEN}"
                 
-                // Optionally fail the build
-                // error("Security scan failed: High/Critical vulnerabilities found")
-            } else {
-                echo "✅ No high/critical vulnerabilities found"
+                snyk test --severity-threshold=high --fail-on=all || (echo "High/Critical issues found" && exit 1)
+              """
             }
           }
         }
       }
-      post {
-          always {
-              // Archive Snyk results
-              archiveArtifacts artifacts: 'snyk-results.json', allowEmptyArchive: true
-              
-              // Publish results (requires Snyk Security Plugin)
-              publishHTML([
-                  allowMissing: false,
-                  alwaysLinkToLastBuild: true,
-                  keepAll: true,
-                  reportDir: '.',
-                  reportFiles: 'snyk-results.json',
-                  reportName: 'Snyk Security Report'
-              ])
-          }
-      }
     }
+
 
     stage('Push Docker Image') {
       steps {          
