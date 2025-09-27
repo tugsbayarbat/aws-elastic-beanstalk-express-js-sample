@@ -87,8 +87,8 @@ pipeline {
     }
 
     stage('Push Docker Image') {
-      echo '====[ PUSH (Docker Hub) ]===='
-      steps {          
+      steps {    
+        echo '====[ PUSH (Docker Hub) ]===='      
         withCredentials([usernamePassword(credentialsId: "${DOCKER_CREDENTIALS_ID}", 
                       usernameVariable: 'DOCKER_USER', 
                       passwordVariable: 'DOCKER_PASS')]) {
