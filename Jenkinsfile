@@ -31,18 +31,14 @@ pipeline {
     stage('Unit tests') {
       steps {
         echo '====[ UNIT TEST ]===='
-        script {
-          docker.image(env.NODE_IMAGE).inside('-e CI=true') {
-            sh """
-              set -e
-              if npm run | grep -qE "^\\s*test\\b"; then
-                npm test
-              else
-                echo "No test script found. Skipping."
-              fi
-            """
-          }
-        }
+        sh """
+          set -e
+          if npm run | grep -qE "^\\s*test\\b"; then
+            npm test
+          else
+            echo "No test script found. Skipping."
+          fi
+        """
       }
     }
 
