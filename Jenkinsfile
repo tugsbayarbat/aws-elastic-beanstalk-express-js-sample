@@ -48,6 +48,44 @@ pipeline {
         }
       }
     }
+
+    stage('Build Docker image') {
+      steps {
+        sh '''
+          docker build -t "${IMAGE_TAG}" -t "${IMAGE_TAG_LATEST}" .
+        '''
+      }
+    }
+
+    stage('Dependency security scan (Snyk)') {
+      when { expression { return env.ENABLE_SNYK.toBoolean() } }
+      steps {
+        withCredentials([string(credentialsId: env.SNYK_TOKEN_ID, variable: 'SNYK_TOKEN')]) {
+          script {
+            docker.image(env.NODE_IMAGE).inside('-e CI=true') {
+              sh '''
+                npm install -g snyk
+                snyk auth "${SNYK_TOKEN}"
+                
+                snyk test --severity-threshold=high --fail-on=all || (echo "High/Critical issues found" && exit 1)
+              '''
+            }
+          }
+        }
+      }
+    }
+
+    stage('Login & Push') {
+      steps {
+        withCredentials([usernamePassword(credentialsId: env.REGISTRY_CRED_ID, usernameVariable: 'REG_USER', passwordVariable: 'REG_PASS')]) {
+          sh '''
+            echo "${REG_PASS}" | docker login "${REGISTRY}" -u "${REG_USER}" --password-stdin
+            docker push "${IMAGE_TAG}"
+            docker push "${IMAGE_TAG_LATEST}"
+          '''
+        }
+      }
+    }
   }
 
   // post {
