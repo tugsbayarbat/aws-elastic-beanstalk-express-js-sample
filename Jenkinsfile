@@ -14,8 +14,8 @@ pipeline {
 
   stages {
     stage('Checkout') {
-      echo '====[ CHECKOUT ]===='
       steps {
+        echo '====[ CHECKOUT ]===='
         checkout scm
       }
     }
