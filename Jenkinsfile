@@ -73,15 +73,14 @@ pipeline {
 
     stage('Push Docker Image') {
       steps {          
-          withCredentials([usernamePassword(credentialsId: "${DOCKER_CREDENTIALS_ID}", 
-                        usernameVariable: 'DOCKER_USER', 
-                        passwordVariable: 'DOCKER_PASS')]) {
-            sh '''
-              echo $DOCKER_PASS | docker login --username $DOCKER_USER --password-stdin
-              docker push "${IMAGE_TAG}"
-              docker push "${IMAGE_TAG_LATEST}"
-            '''
-          }
+        withCredentials([usernamePassword(credentialsId: "${DOCKER_CREDENTIALS_ID}", 
+                      usernameVariable: 'DOCKER_USER', 
+                      passwordVariable: 'DOCKER_PASS')]) {
+        sh '''
+          echo $DOCKER_PASS | docker login --username $DOCKER_USER --password-stdin
+          docker push "${IMAGE_TAG}"
+          docker push "${IMAGE_TAG_LATEST}"
+          '''
         }
       }
     }
