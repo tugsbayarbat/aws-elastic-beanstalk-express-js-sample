@@ -33,6 +33,21 @@ pipeline {
           }
         }
       }
+      post {
+        always {
+          echo '====[ INSTALL DEPS DONE ]===='
+          archiveArtifacts artifacts: 'package.json,package-lock.json', allowEmptyArchive: true
+        }
+        success {
+          echo '[DEPS] Dependencies installed successfully'
+        }
+        unstable {
+          echo '[DEPS] Marked UNSTABLE (warnings during install)'
+        }
+        failure {
+          echo '[DEPS] Dependency installation failed'
+        }
+      }
     }
 
     stage('Unit tests') {
@@ -46,7 +61,23 @@ pipeline {
           }
         }
       }
+      post {
+        always {
+          echo '====[ UNIT TEST DONE ]===='
+          archiveArtifacts artifacts: 'test-results/**/*.xml', allowEmptyArchive: true
+        }
+        success {
+          echo '[UNIT TEST] All tests passed'
+        }
+        unstable {
+          echo '[UNIT TEST] Some tests failed or warnings'
+        }
+        failure {
+          echo '[UNIT TEST] Tests failed'
+        }
+      }
     }
+
     stage('Dependency security scan (Snyk)') {
       steps {
         echo '====[ SECURITY SCAN (Snyk) ]===='
@@ -67,12 +98,6 @@ pipeline {
                 echo "[SNYK] test (dependencies)"
                 # Do not fail the whole build on vulns; mark UNSTABLE instead in Jenkins
                 npx snyk test --severity-threshold=medium --json-file-output=.snyk/deps.json || true
-
-                echo "[SNYK] test (code) - optional"
-                npx snyk code test --json-file-output=.snyk/code.json || true
-
-                echo "[SNYK] monitor (send snapshot to Snyk)"
-                npx snyk monitor --project-name="${JOB_NAME}" || true
               '''
               archiveArtifacts artifacts: '.snyk/*.json', allowEmptyArchive: true
             }
@@ -84,37 +109,30 @@ pipeline {
           echo '====[ SNYK SCAN DONE ]===='
         }
         success {
-          echo 'No blocking issues found.'
+          echo '[SNYK SCAN] No blocking issues found.'
         }
         unstable {
-          echo 'Vulnerabilities detected: check .snyk/*.json artifacts.'
+          echo '[SNYK SCAN] Vulnerabilities detected: check .snyk/*.json artifacts.'
         }
       }
     }
-
-    // stage('Dependency security scan (Snyk)') {
-    //   steps {
-    //     echo '====[ SECURITY SCAN (Snyk) ]===='
-    //     withCredentials([string(credentialsId: env.SNYK_TOKEN_ID, variable: 'SNYK_TOKEN')]) {
-    //       script {
-    //         docker.image(env.NODE_IMAGE).inside('-e CI=true') {
-    //           sh """
-    //             npm install -g snyk
-    //             snyk auth "${SNYK_TOKEN}"
-                
-    //             snyk test --severity-threshold=high --fail-on=all --json > snyk-report.json || (echo "High/Critical issues found" && exit 1)
-    //           """
-    //         }
-    //       }
-    //     }
-    //   }
-    // }
 
     stage('Build Docker Image') {
       steps {
         echo '====[ BUILD DOCKER IMAGE ]===='
         script {
           docker.build("${DOCKER_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}")
+        }
+      }
+      post {
+        always {
+          echo '====[ BUILD DOCKER IMAGE DONE ]===='
+        }
+        success {
+          echo "[DOCKER] Image built successfully"
+        }
+        failure {
+          echo "[DOCKER] Image build failed"
         }
       }
     }
@@ -126,20 +144,28 @@ pipeline {
                       passwordVariable: 'DOCKER_PASS')]) {
         echo '====[ PUSH DOCKER IMAGE ]===='
         sh '''
+          echo "[DOCKER] Logging into registry: ${DOCKER_REGISTRY}"
           echo $DOCKER_PASS | docker login --username $DOCKER_USER --password-stdin
+
+          echo "[DOCKER] Pushing image: ${IMAGE_NAME}:${IMAGE_TAG}"
           docker push ${IMAGE_NAME}:${IMAGE_TAG}
+
+          echo "[DOCKER] Tagging as latest"
           docker push ${IMAGE_NAME}:latest
           '''
         }
       }
-    }
-  }
-
-  post {
-    always {
-      junit allowEmptyResults: true, testResults: '**/junit*.xml'
-
-      archiveArtifacts artifacts: 'snyk-report.json', allowEmptyArchive: true
+      post {
+        always {
+          echo '====[ PUSH DOCKER IMAGE DONE ]===='
+        }
+        success {
+          echo '[DOCKER] Image pushed successfully'
+        }
+        failure {
+          echo '[DOCKER] Failed to push image'
+        }
+      }
     }
   }
 }
