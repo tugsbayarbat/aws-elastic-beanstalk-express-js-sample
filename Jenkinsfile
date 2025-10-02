@@ -50,10 +50,10 @@ pipeline {
 
     stage('Dependency security scan (Snyk)') {
       steps {
-        echo '====[ SECURITY SCAN (Snyk) ]===='
-        script {
-          docker.image(env.NODE_IMAGE).inside('-e CI=true') {
-            withCredentials([string(credentialsId: env.SNYK_TOKEN_ID, variable: 'SNYK_TOKEN')]) {
+        withCredentials([string(credentialsId: env.SNYK_TOKEN_ID, variable: 'SNYK_TOKEN')]) {
+          echo '====[ SECURITY SCAN (Snyk) ]===='
+          script {
+            docker.image(env.NODE_IMAGE).inside('-e CI=true') {
               sh """
                 npm install -g snyk
               snyk auth "${SNYK_TOKEN}"
