@@ -50,16 +50,17 @@ pipeline {
 
     stage('Dependency security scan (Snyk)') {
       steps {
-        withCredentials([string(credentialsId: env.SNYK_TOKEN_ID, variable: 'SNYK_TOKEN')]) {
-          echo '====[ SECURITY SCAN (Snyk) ]===='
-          script {
+        echo '====[ SECURITY SCAN (Snyk) ]===='
+        script {
           docker.image(env.NODE_IMAGE).inside('-e CI=true') {
-            sh """
-              npm install -g snyk
-            snyk auth "${SNYK_TOKEN}"
-            
-            snyk test --severity-threshold=high --fail-on=all --json > snyk-report.json || (echo "High/Critical issues found" && exit 1)
-            """
+            withCredentials([string(credentialsId: env.SNYK_TOKEN_ID, variable: 'SNYK_TOKEN')]) {
+              sh """
+                npm install -g snyk
+              snyk auth "${SNYK_TOKEN}"
+              
+              snyk test --severity-threshold=high --fail-on=all --json > snyk-report.json || (echo "High/Critical issues found" && exit 1)
+              """
+            }
           }
         }
       }
