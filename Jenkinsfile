@@ -15,14 +15,14 @@ pipeline {
   stages {
     stage('Checkout') {
       steps {
-        echo '====[ CHECKOUT ]===='
+        echo '        ====[ CHECKOUT ]===='
         checkout scm
       }
     }
 
     stage('Install deps (Node 16)') {
       steps {
-        echo '====[ BUILD (npm ci / build) ]===='
+        echo '        ====[ BUILD (npm ci / build) ]===='
         script {
           docker.image(env.NODE_IMAGE).inside('-e CI=true') {
             sh """
@@ -35,7 +35,7 @@ pipeline {
       }
       post {
         always {
-          echo '====[ INSTALL DEPS DONE ]===='
+          echo '        ====[ INSTALL DEPS DONE ]===='
           archiveArtifacts artifacts: 'package.json,package-lock.json', allowEmptyArchive: true
         }
         success {
@@ -52,7 +52,7 @@ pipeline {
 
     stage('Unit tests') {
       steps {
-        echo '====[ UNIT TEST ]===='
+        echo '        ====[ UNIT TEST ]===='
         script {
           docker.image(env.NODE_IMAGE).inside('-e CI=true') {
             sh """
@@ -63,7 +63,7 @@ pipeline {
       }
       post {
         always {
-          echo '====[ UNIT TEST DONE ]===='
+          echo '        ====[ UNIT TEST DONE ]===='
           archiveArtifacts artifacts: 'test-results/**/*.xml', allowEmptyArchive: true
         }
         success {
@@ -80,12 +80,11 @@ pipeline {
 
     stage('Dependency security scan (Snyk)') {
       steps {
-        echo '====[ SECURITY SCAN (Snyk) ]===='
+        echo '        ====[ SECURITY SCAN (Snyk) ]===='
         withCredentials([string(credentialsId: env.SNYK_TOKEN_ID, variable: 'SNYK_TOKEN')]) {
           script {
             docker.image(env.NODE_IMAGE).inside('-e CI=true') {
               sh '''
-                set -euxo pipefail
                 echo "[SNYK] installing CLI locally"
                 npm install --no-save snyk@latest
 
@@ -106,7 +105,7 @@ pipeline {
       }
       post {
         always {
-          echo '====[ SNYK SCAN DONE ]===='
+          echo '        ====[ SNYK SCAN DONE ]===='
         }
         success {
           echo '[SNYK SCAN] No blocking issues found.'
@@ -119,14 +118,14 @@ pipeline {
 
     stage('Build Docker Image') {
       steps {
-        echo '====[ BUILD DOCKER IMAGE ]===='
+        echo '        ====[ BUILD DOCKER IMAGE ]===='
         script {
           docker.build("${DOCKER_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}")
         }
       }
       post {
         always {
-          echo '====[ BUILD DOCKER IMAGE DONE ]===='
+          echo '        ====[ BUILD DOCKER IMAGE DONE ]===='
         }
         success {
           echo "[DOCKER] Image built successfully"
@@ -142,7 +141,7 @@ pipeline {
         withCredentials([usernamePassword(credentialsId: "${DOCKER_CREDENTIALS_ID}", 
                       usernameVariable: 'DOCKER_USER', 
                       passwordVariable: 'DOCKER_PASS')]) {
-        echo '====[ PUSH DOCKER IMAGE ]===='
+        echo '        ====[ PUSH DOCKER IMAGE ]===='
         sh '''
           echo "[DOCKER] Logging into registry: ${DOCKER_REGISTRY}"
           echo $DOCKER_PASS | docker login --username $DOCKER_USER --password-stdin
@@ -157,7 +156,7 @@ pipeline {
       }
       post {
         always {
-          echo '====[ PUSH DOCKER IMAGE DONE ]===='
+          echo '        ====[ PUSH DOCKER IMAGE DONE ]===='
         }
         success {
           echo '[DOCKER] Image pushed successfully'
