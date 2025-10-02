@@ -48,19 +48,19 @@ pipeline {
       }
     }
 
-    // stage('Dependency security scan (Snyk)') {
-    //   steps {
-    //     withCredentials([string(credentialsId: env.SNYK_TOKEN_ID, variable: 'SNYK_TOKEN')]) {
-    //       echo '====[ SECURITY SCAN (Snyk) ]===='
-    //       sh """
-    //         npm install -g snyk
-    //         snyk auth "${SNYK_TOKEN}"
+    stage('Dependency security scan (Snyk)') {
+      steps {
+        withCredentials([string(credentialsId: env.SNYK_TOKEN_ID, variable: 'SNYK_TOKEN')]) {
+          echo '====[ SECURITY SCAN (Snyk) ]===='
+          sh """
+            npm install -g snyk
+            snyk auth "${SNYK_TOKEN}"
             
-    //         snyk test --severity-threshold=high --fail-on=all || (echo "High/Critical issues found" && exit 1)
-    //       """
-    //     }
-    //   }
-    // }
+            snyk test --severity-threshold=high --fail-on=all --json > snyk-report.json || (echo "High/Critical issues found" && exit 1)
+          """
+        }
+      }
+    }
 
     stage('Build Docker Image') {
       steps {
@@ -88,8 +88,10 @@ pipeline {
   }
 
   post {
-    success {
-      echo "Build ${env.BUILD_NUMBER} pushed as ${IMAGE_TAG}"
+    always {
+      junit allowEmptyResults: true, testResults: '**/junit*.xml'
+
+      archiveArtifacts artifacts: 'snyk-report.json', allowEmptyArchive: true
     }
   }
 }
